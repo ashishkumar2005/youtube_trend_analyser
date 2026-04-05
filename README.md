@@ -1,6 +1,6 @@
 # YT Trending Intelligence Dashboard
  
-> A fully automated, cloud-deployed data science system that collects YouTube trending videos from 5 countries every 3 hours — even when your laptop is completely off.
+> A fully automated, cloud-deployed data science system that collects YouTube trending videos from 5 countries every 3 hours.
  
 [![GitHub Actions](https://img.shields.io/github/actions/workflow/status/ashishkumar2005/yt/collect_trending.yml?label=Data%20Collection&logo=github)](https://github.com/ashishkumar2005/yt/actions)
 [![Live Dashboard](https://img.shields.io/badge/Live%20Dashboard-Railway-blueviolet?logo=railway)](https://yt-production-8742.up.railway.app)
