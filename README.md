@@ -1,4 +1,4 @@
-# 📊 YT Trending Intelligence Dashboard
+# YT Trending Intelligence Dashboard
  
 > A fully automated, cloud-deployed data science system that collects YouTube trending videos from 5 countries every 3 hours — even when your laptop is completely off.
  
@@ -9,13 +9,13 @@
  
 ---
  
-## 🌐 Live Demo
+## Live Demo
  
 **Dashboard:** [yt-production-8742.up.railway.app](https://yt-production-8742.up.railway.app)
  
 ---
  
-## 📸 Screenshots
+## Screenshots
  
 | Live Feed | Analysis |
 |-----------|----------|
@@ -30,7 +30,7 @@
  
 ---
  
-## 🚀 What This Project Does
+## What This Project Does
  
 Think of it like **a newspaper that writes itself.**
  
@@ -56,7 +56,7 @@ yt-production-8742.up.railway.app
  
 ---
  
-## 🏗️ Architecture
+## Architecture
  
 ```
 ┌─────────────────────────────────────────┐
@@ -83,19 +83,19 @@ yt-production-8742.up.railway.app
  
 ---
  
-## ✨ Key Features
+##  Key Features
  
-- ⚡ **Fully Automated** — GitHub Actions runs 24/7, no manual effort
-- 🌍 **5 Countries** — US, India, UK, Canada, Australia
-- 📈 **250 videos per run** — 50 per country every 3 hours
-- 🤖 **ML Predictions** — Random Forest classifier predicts trend probability
-- 📊 **5-Page Dashboard** — Live Feed, Analysis, Country Compare, Historical, Predict
-- 🔒 **Production Security** — All secrets managed via GitHub Secrets & Railway env vars
-- 🗄️ **Cloud MySQL** — Persistent database with 2,000+ rows and growing
+- **Fully Automated** — GitHub Actions runs 24/7, no manual effort
+- **5 Countries** — US, India, UK, Canada, Australia
+- **250 videos per run** — 50 per country every 3 hours
+- **ML Predictions** — Random Forest classifier predicts trend probability
+- **5-Page Dashboard** — Live Feed, Analysis, Country Compare, Historical, Predict
+- **Production Security** — All secrets managed via GitHub Secrets & Railway env vars
+- **Cloud MySQL** — Persistent database with 2,000+ rows and growing
  
 ---
  
-## 📁 Project Structure
+## Project Structure
  
 ```
 yt/
@@ -121,7 +121,7 @@ yt/
  
 ---
  
-## 🧠 Machine Learning
+## Machine Learning
  
 | Model | Type | Purpose |
 |-------|------|---------|
@@ -139,7 +139,7 @@ yt/
  
 ---
  
-## 🛠️ Tech Stack
+## Tech Stack
  
 | Layer | Technology |
 |-------|-----------|
@@ -155,7 +155,7 @@ yt/
  
 ---
  
-## ⚙️ Setup & Installation
+## Setup & Installation
  
 ### Prerequisites
 - Python 3.11+
@@ -201,7 +201,7 @@ streamlit run dashboard/app.py
  
 ---
  
-## 🤖 Automated Collection (GitHub Actions)
+## Automated Collection (GitHub Actions)
  
 The `.github/workflows/collect_trending.yml` workflow runs automatically:
  
@@ -225,7 +225,7 @@ Add these secrets to your GitHub repo (**Settings → Secrets → Actions**):
  
 ---
  
-## 📈 Key Stats
+## Key Stats
  
 - ✅ **250 videos** collected per run
 - ✅ **2,000+ rows** already in database and growing
@@ -237,7 +237,7 @@ Add these secrets to your GitHub repo (**Settings → Secrets → Actions**):
  
 ---
  
-## 🔒 Security
+## Security
  
 - `.env` file is listed in `.gitignore` — never uploaded to GitHub
 - All production secrets stored in GitHub Encrypted Secrets
@@ -246,8 +246,7 @@ Add these secrets to your GitHub repo (**Settings → Secrets → Actions**):
  
 ---
  
-## 👤 Author
+## Author
  
 **Ashish Kumar**
-- GitHub: [@ashishkumar2005](https://github.com/ashishkumar2005)
-- LinkedIn: [(https://www.linkedin.com/in/ashishkumar2005/)]
+- LinkedIn: [@ashishkumar2005](https://www.linkedin.com/in/ashishkumar2005/)
