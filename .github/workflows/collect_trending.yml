@@ -1,0 +1,64 @@
+name: YouTube Trending Data Collector
+
+on:
+  schedule:
+    - cron: '0 */3 * * *'
+  workflow_dispatch:
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Test MySQL connection
+        env:
+          MYSQLHOST:     ${{ secrets.MYSQLHOST }}
+          MYSQLPORT:     ${{ secrets.MYSQLPORT }}
+          MYSQLUSER:     ${{ secrets.MYSQLUSER }}
+          MYSQLPASSWORD: ${{ secrets.MYSQLPASSWORD }}
+          MYSQLDATABASE: ${{ secrets.MYSQLDATABASE }}
+        run: |
+          python -c "
+          import os, mysql.connector
+          try:
+              conn = mysql.connector.connect(
+                  host=os.environ['MYSQLHOST'],
+                  port=int(os.environ.get('MYSQLPORT', 3306)),
+                  user=os.environ['MYSQLUSER'],
+                  password=os.environ['MYSQLPASSWORD'],
+                  database=os.environ['MYSQLDATABASE'],
+                  connection_timeout=30
+              )
+              print('MySQL connection successful!')
+              conn.close()
+          except Exception as e:
+              print(f'MySQL connection FAILED: {e}')
+              exit(1)
+          "
+
+      - name: Run data collector
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          MYSQLHOST:       ${{ secrets.MYSQLHOST }}
+          MYSQLPORT:       ${{ secrets.MYSQLPORT }}
+          MYSQLUSER:       ${{ secrets.MYSQLUSER }}
+          MYSQLPASSWORD:   ${{ secrets.MYSQLPASSWORD }}
+          MYSQLDATABASE:   ${{ secrets.MYSQLDATABASE }}
+        run: python src/data_collector.py
+
+      - name: Done
+        run: echo "Completed at $(date -u)"
