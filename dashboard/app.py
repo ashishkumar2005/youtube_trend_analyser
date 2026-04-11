@@ -662,7 +662,7 @@ def page_live(df):
     # Each video can appear multiple times (once per collection run).
     # We keep only the most recent snapshot so the table shows clean, unique videos.
     df_dedup = (
-        df.sort_values("fetched_at", ascending=False)
+        df.sort_values("run_at", ascending=False)
           .drop_duplicates(subset=["video_id", "country"], keep="first")
           .reset_index(drop=True)
     )
@@ -674,7 +674,7 @@ def page_live(df):
     display = filtered[[
         "title", "channel_title", "country", "view_count",
         "like_count", "comment_count", "category_name",
-        "views_per_hour", "fetched_at"
+        "views_per_hour", "run_at"
     ]].copy()
     display = display.sort_values("view_count", ascending=False).head(top_n).reset_index(drop=True)
     display["view_count"]     = display["view_count"].apply(fmt_df)
@@ -682,7 +682,7 @@ def page_live(df):
     display["comment_count"]  = display["comment_count"].apply(fmt_df)
     display["views_per_hour"] = display["views_per_hour"].apply(fmt_df)
     display.columns = ["Video Title", "Channel", "Country", "Views",
-                        "Likes", "Comments", "Category", "Views/Hour", "Fetched At"]
+                        "Likes", "Comments", "Category", "Views/Hour", "Collected At"]
     st.dataframe(display, use_container_width=True, hide_index=True)
 
     st.info(
@@ -972,9 +972,9 @@ def page_historical(df):
     )
 
     df = df.copy()
-    df["fetched_at"] = pd.to_datetime(df["fetched_at"], errors="coerce")
-    df = df.dropna(subset=["fetched_at"])
-    df["date"] = df["fetched_at"].dt.strftime("%Y-%m-%d")
+    df["run_at"] = pd.to_datetime(df["run_at"], errors="coerce")
+    df = df.dropna(subset=["run_at"])
+    df["date"] = df["run_at"].dt.strftime("%Y-%m-%d")
 
     sh("Most Trending Categories — All Time")
     cat_summary = (

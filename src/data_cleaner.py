@@ -88,7 +88,7 @@ def clean_and_engineer(df):
 
     df["hours_to_trend"] = pd.to_numeric(
         df.apply(lambda r: get_hours_since_published(
-            str(r["published_at"]), str(r["fetched_at"])
+            str(r["published_at"]), str(r["run_at"])
         ), axis=1),
         errors="coerce"
     ).fillna(1).astype(float)
