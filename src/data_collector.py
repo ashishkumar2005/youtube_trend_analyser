@@ -33,38 +33,52 @@ def fetch_trending_videos(country_code):
     """Fetch top trending videos for a given country code."""
     youtube = get_youtube_client()
     logger.info(f"Fetching trending videos for: {country_code}")
-    request  = youtube.videos().list(
+
+    request = youtube.videos().list(
         part="snippet,statistics,contentDetails",
         chart="mostPopular",
         regionCode=country_code,
         maxResults=MAX_RESULTS
     )
+
     response = request.execute()
     return response.get("items", [])
 
 
 def parse_video(video, country_code):
-    """Flatten a raw API video object into a clean dict."""
-    snippet = video.get("snippet",        {})
-    stats   = video.get("statistics",     {})
+    """
+    Flatten a raw API video object into a clean dict.
+
+    IMPORTANT:
+    - fetched_at REMOVED
+    - Snapshot timestamp handled in database layer
+    """
+    snippet = video.get("snippet", {})
+    stats   = video.get("statistics", {})
     content = video.get("contentDetails", {})
+
     return {
         "video_id":      video.get("id", ""),
         "country":       country_code,
-        "fetched_at":    datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
-        "title":         snippet.get("title",     ""),
+
+        # ❌ removed fetched_at
+
+        "title":         snippet.get("title", ""),
         "channel_title": snippet.get("channelTitle", ""),
-        "channel_id":    snippet.get("channelId",    ""),
-        "category_id":   snippet.get("categoryId",   ""),
-        "published_at":  snippet.get("publishedAt",  ""),
-        "description":   snippet.get("description",  "")[:300],
+        "channel_id":    snippet.get("channelId", ""),
+        "category_id":   snippet.get("categoryId", ""),
+        "published_at":  snippet.get("publishedAt", ""),
+        "description":   str(snippet.get("description", ""))[:300],
+
         "tags":          "|".join(snippet.get("tags", [])),
         "thumbnail":     snippet.get("thumbnails", {}).get("high", {}).get("url", ""),
-        "view_count":    int(stats.get("viewCount",    0)),
-        "like_count":    int(stats.get("likeCount",    0)),
-        "comment_count": int(stats.get("commentCount", 0)),
-        "duration":      content.get("duration",   ""),
-        "definition":    content.get("definition", ""),
+
+        "view_count":    int(stats.get("viewCount", 0) or 0),
+        "like_count":    int(stats.get("likeCount", 0) or 0),
+        "comment_count": int(stats.get("commentCount", 0) or 0),
+
+        "duration":      content.get("duration", ""),
+        "definition":    content.get("definition", "hd"),
     }
 
 
@@ -74,9 +88,12 @@ def save_raw_json(data, country_code):
         os.makedirs(RAW_DATA_PATH, exist_ok=True)
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M")
         filename  = f"{RAW_DATA_PATH}{country_code}_{timestamp}.json"
+
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+
         logger.info(f"Raw JSON saved: {filename}")
+
     except Exception as e:
         logger.warning(f"Could not save raw JSON (non-critical): {e}")
 
@@ -102,6 +119,7 @@ def collect_all_countries():
 
     df = pd.DataFrame(all_videos)
     logger.info(f"Total videos collected: {len(df)}")
+
     return df
 
 

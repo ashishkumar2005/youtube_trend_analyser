@@ -8,4 +8,5 @@ joblib
 textblob
 plotly
 python-dotenv
+apscheduler
 requests
