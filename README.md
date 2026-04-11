@@ -34,14 +34,14 @@
  
 Think of it like **a newspaper that writes itself.**
  
-Every 3 hours, an automated pipeline:
+Every 8 hours, an automated pipeline:
 1. **Wakes up** on GitHub Actions (no laptop needed)
 2. **Calls YouTube API** → fetches top 50 trending videos from 5 countries
 3. **Saves 250 videos** into a cloud MySQL database on Railway
 4. **Dashboard updates** automatically — anyone can visit the live URL
  
 ```
-Every 3 hours (GitHub Actions)
+Every 8 hours (GitHub Actions)
         ↓
 YouTube Data API v3
         ↓
@@ -61,7 +61,7 @@ yt-production-8742.up.railway.app
 ```
 ┌─────────────────────────────────────────┐
 │              GITHUB ACTIONS             │
-│   Cron: every 3 hours (0 */3 * * *)    │
+│   Cron: every 8 hours (0 */8 * * *)    │
 │   → Installs dependencies               │
 │   → Runs src/data_collector.py          │
 │   → Fetches 250 videos from YouTube     │
@@ -87,8 +87,8 @@ yt-production-8742.up.railway.app
  
 - **Fully Automated** — GitHub Actions runs 24/7, no manual effort
 - **5 Countries** — US, India, UK, Canada, Australia
-- **250 videos per run** — 50 per country every 3 hours
-- **ML Predictions** — Random Forest classifier predicts trend probability
+- **250 videos per run** — 50 per country every 8 hours
+- **ML Predictions** — Logistic Regression
 - **5-Page Dashboard** — Live Feed, Analysis, Country Compare, Historical, Predict
 - **Production Security** — All secrets managed via GitHub Secrets & Railway env vars
 - **Cloud MySQL** — Persistent database with 2,000+ rows and growing
@@ -122,14 +122,47 @@ yt/
 ---
  
 ## Machine Learning
+
+This project uses **Logistic Regression** to predict whether a YouTube video is likely to trend.
+
+### Model Overview
+- Each feature (views, likes, comments, etc.) is assigned a weight  
+- The model calculates a weighted sum of all features  
+- If the score crosses a threshold, the video is predicted to trend  
+
+### How It Works
+
+- Uses **11 input features** from video metadata  
+- Outputs a **probability (0–100%)** of a video trending  
+- Classifies videos into:
+  - **High Trend Potential**
+  - **Low Trend Potential**
+
+### Real-Time Training
+
+Unlike static models, this system:
+
+- Trains **dynamically on live database data**
+- Retrains **every time the Predict page is opened**
+- Always reflects the **latest trending patterns**
+
+### Why Logistic Regression?
+
+- Fast and efficient for real-time predictions  
+- Interpretable (easy to understand feature impact)  
+- Works well with structured tabular data  
+
+### Features Used
+
+- View Count  
+- Like Count  
+- Comment Count  
+- Duration  
+- Publish Time  
+- Title Features (TF-IDF)  
+- Engagement Metrics  
  
-| Model | Type | Purpose |
-|-------|------|---------|
-| Random Forest | Classification | Predicts if a video will trend (High/Low) |
-| Ridge Regression | Regression | Predicts expected view count |
-| K-Means Clustering | Clustering | Groups similar videos by title keywords |
- 
-**43 engineered features** including:
+**40+ engineered features** including:
 - `views_per_hour` — viral velocity
 - `like_view_ratio` — audience quality signal
 - `hours_to_trend` — upload-to-trending speed
@@ -146,10 +179,10 @@ yt/
 | Language | Python 3.11 |
 | Data Collection | YouTube Data API v3 |
 | Data Processing | Pandas, NumPy |
-| Machine Learning | Scikit-learn, TextBlob |
+| Machine Learning | Scikit-learn (Logistic Regression), TextBlob |
 | Database | MySQL (Railway) |
 | Dashboard | Streamlit, Plotly |
-| Scheduler | GitHub Actions (cron) |
+| Scheduler | GitHub Actions (Scheduled Jobs) |
 | Hosting | Railway |
 | Secret Management | GitHub Secrets + Railway Env Vars |
  
@@ -208,7 +241,7 @@ The `.github/workflows/collect_trending.yml` workflow runs automatically:
 ```yaml
 on:
   schedule:
-    - cron: '0 */3 * * *'   # Every 3 hours
+    - cron: '0 */8 * * *'   # Every 8 hours
   workflow_dispatch:          # Manual trigger anytime
 ```
  
@@ -229,7 +262,7 @@ Add these secrets to your GitHub repo (**Settings → Secrets → Actions**):
  
 - ✅ **250 videos** collected per run
 - ✅ **2,000+ rows** already in database and growing
-- ✅ **Every 3 hours** automatically
+- ✅ **Every 8 hours** automatically
 - ✅ **5 countries** tracked simultaneously
 - ✅ **43 features** engineered per video
 - ✅ **~40 seconds** per full collection run
