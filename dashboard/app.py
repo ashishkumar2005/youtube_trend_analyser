@@ -21,7 +21,6 @@ from textblob import TextBlob
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 
-# ── Country code → full name ──────────────────────────────────
 COUNTRY_NAMES = {
     "US": "United States",
     "IN": "India",
@@ -36,9 +35,6 @@ def apply_country_names(df):
         df["country"] = df["country"].map(COUNTRY_NAMES).fillna(df["country"])
     return df
 
-# ── Features used by Logistic Regression (train + predict) ───
-# These 11 features can be computed from BOTH the database
-# AND from user inputs on the Predict page.
 PREDICT_FEATURES = [
     "like_view_ratio",
     "comment_view_ratio",
@@ -53,7 +49,6 @@ PREDICT_FEATURES = [
     "title_sentiment",
 ]
 
-# ─────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap');
@@ -440,29 +435,8 @@ def load_data(limit=5000):
 # ── Train simple Logistic Regression on live data ─────────────
 @st.cache_data(ttl=600)
 def train_simple_model(_df):
-    """
-    Train a Logistic Regression model on the live dataset.
-
-    What is Logistic Regression? (For interviews)
-    ─────────────────────────────────────────────
-    It is the simplest ML algorithm for yes/no (binary) prediction.
-    It learns a weight for each feature. During prediction, it
-    multiplies features by their weights, adds them up, and passes
-    the result through a sigmoid function to get a probability
-    between 0% and 100%.
-
-    Formula: probability = 1 / (1 + e^-(w1*f1 + w2*f2 + ... + bias))
-
-    Why it is good for beginners:
-    - Simple to understand and explain
-    - Fast to train (seconds, not minutes)
-    - Gives a probability score (not just yes/no)
-    - No hyperparameter tuning needed
-    - Works well on structured/tabular data
-    """
     df = _df.copy()
 
-    # Check all required features and target exist
     required = PREDICT_FEATURES + ["is_trending_high"]
     available = [c for c in required if c in df.columns]
     if len(available) < len(required):
@@ -475,18 +449,14 @@ def train_simple_model(_df):
     X = df_model[PREDICT_FEATURES].values
     y = df_model["is_trending_high"].values
 
-    # Normalise features so all are on same scale
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
-    # Train Logistic Regression
     model = LogisticRegression(max_iter=1000, random_state=42)
     model.fit(X_scaled, y)
 
     return model, scaler
 
-
-# ── Generate dynamic insights ─────────────────────────────────
 def generate_insights(df):
     insights = []
 
@@ -630,10 +600,8 @@ def kpi_cards(df):
     </div>
     """, unsafe_allow_html=True)
 
-
-# ══════════════════════════════════════════════════════════════
 #  PAGE: LIVE FEED
-# ══════════════════════════════════════════════════════════════
+
 def page_live(df):
     st.markdown(
         '<div class="page-hero">'
@@ -685,16 +653,9 @@ def page_live(df):
                         "Likes", "Comments", "Category", "Views/Hour", "Collected At"]
     st.dataframe(display, use_container_width=True, hide_index=True)
 
-    st.info(
-        "ℹ️  Each video is shown once (latest snapshot). "
-        "The same video may appear in multiple countries if it trends globally. "
-        "Data refreshes every 8 hours via GitHub Actions."
-    )
 
-
-# ══════════════════════════════════════════════════════════════
 #  PAGE: ANALYSIS
-# ══════════════════════════════════════════════════════════════
+
 def page_analysis(df):
     st.markdown(
         '<div class="page-hero">'
@@ -739,10 +700,8 @@ def page_analysis(df):
                 </div>""", unsafe_allow_html=True)
         st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
+#  PAGE: COUNTRY COMPARE
 
-# ══════════════════════════════════════════════════════════════
-#  PAGE: COUNTRY COMPARE  (simplified — easy bar charts)
-# ══════════════════════════════════════════════════════════════
 def page_country(df):
     st.markdown(
         '<div class="page-hero">'
@@ -763,7 +722,6 @@ def page_country(df):
 
     dfc = df[df["country"].isin(countries)]
 
-    # ── Stat cards ──────────────────────────────────────────────
     sh("Country Highlights at a Glance")
 
     top_cat_per = (
@@ -805,10 +763,9 @@ def page_country(df):
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Chart 1: Average Views per Country (simple bar) ─────────
     sh("Which Country Gets The Most Views?")
 
-    st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+    # st.markdown('<div class="chart-card">', unsafe_allow_html=True)
     st.markdown(
         '<div class="chart-question">Average views per trending video by country</div>'
         '<div class="chart-context">'
@@ -833,18 +790,16 @@ def page_country(df):
                        yaxis_title="Average Views", **THEME)
     st.plotly_chart(fig1, use_container_width=True)
     top_v = avg_views.iloc[0]["country"]
-    st.markdown(
-        f'<div class="chart-insight-bar">💡 <b>{top_v}</b> trending videos '
-        f'get the most views on average — '
-        f'{fmt(avg_views.iloc[0]["view_count"])} per video.</div>',
-        unsafe_allow_html=True
-    )
+    # st.markdown(
+    #     f'<div class="chart-insight-bar">💡 <b>{top_v}</b> trending videos '
+    #     f'get the most views on average — '
+    #     f'{fmt(avg_views.iloc[0]["view_count"])} per video.</div>',
+    #     unsafe_allow_html=True
+    # )
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── Chart 2: Engagement Rate per Country (simple bar) ───────
     sh("Where Do Viewers Engage The Most?")
 
-    st.markdown('<div class="chart-card">', unsafe_allow_html=True)
     st.markdown(
         '<div class="chart-question">Engagement rate by country (likes ÷ views)</div>'
         '<div class="chart-context">'
@@ -870,17 +825,15 @@ def page_country(df):
                        yaxis_title="Engagement Rate (%)", **THEME)
     st.plotly_chart(fig2, use_container_width=True)
     top_e = eng_data.iloc[0]["country"]
-    st.markdown(
-        f'<div class="chart-insight-bar">💡 <b>{top_e}</b> has the most engaged viewers — '
-        f'{eng_data.iloc[0]["pct"]:.1f}% of viewers liked trending videos there.</div>',
-        unsafe_allow_html=True
-    )
+    # st.markdown(
+    #     f'<div class="chart-insight-bar">💡 <b>{top_e}</b> has the most engaged viewers — '
+    #     f'{eng_data.iloc[0]["pct"]:.1f}% of viewers liked trending videos there.</div>',
+    #     unsafe_allow_html=True
+    # )
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── Chart 3: Top Category per Country (grouped bar) ─────────
     sh("What Kind of Videos Trend in Each Country?")
 
-    st.markdown('<div class="chart-card">', unsafe_allow_html=True)
     st.markdown(
         '<div class="chart-question">Number of trending videos per category per country</div>'
         '<div class="chart-context">'
@@ -903,65 +856,8 @@ def page_country(df):
     st.plotly_chart(fig3, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── Chart 4: Hours to go viral per country ───────────────────
-    # sh("How Quickly Do Videos Trend in Each Country?")
-
-    # st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-    # st.markdown(
-    #     '<div class="chart-question">Median hours from upload to appearing on trending</div>'
-    #     '<div class="chart-context">'
-    #     'Shorter bar = videos trend faster. A video trending in 10 hours went viral '
-    #     'faster than one that took 50 hours.'
-    #     '</div>',
-    #     unsafe_allow_html=True
-    # )
-    # viral_data = (
-    #     dfc.groupby("country")["hours_to_trend"]
-    #        .median().reset_index()
-    #        .sort_values("hours_to_trend")
-    # )
-    # fig4 = go.Figure(go.Bar(
-    #     x=viral_data["country"],
-    #     y=viral_data["hours_to_trend"],
-    #     marker=dict(color=COLORS[:len(viral_data)]),
-    #     text=[f"{v:.0f}h" for v in viral_data["hours_to_trend"]],
-    #     textposition="outside",
-    #     hovertemplate="<b>%{x}</b><br>Median: %{text}<extra></extra>"
-    # ))
-    # fig4.update_layout(height=300, xaxis_title="Country",
-    #                    yaxis_title="Hours to Trend", **THEME)
-    # st.plotly_chart(fig4, use_container_width=True)
-    # fastest_c = viral_data.iloc[0]["country"]
-    # st.markdown(
-    #     f'<div class="chart-insight-bar">💡 Videos trend fastest in <b>{fastest_c}</b> — '
-    #     f'median {viral_data.iloc[0]["hours_to_trend"]:.0f} hours after upload.</div>',
-    #     unsafe_allow_html=True
-    # )
-    # st.markdown('</div>', unsafe_allow_html=True)
-
-    # # ── Summary table ────────────────────────────────────────────
-    # sh("Full Country Summary Table")
-    # eng = dfc.groupby("country").agg(
-    #     avg_views       =("view_count",       "mean"),
-    #     avg_likes       =("like_count",       "mean"),
-    #     avg_comments    =("comment_count",    "mean"),
-    #     engagement_rate =("like_view_ratio",  "mean"),
-    #     hrs_to_viral    =("hours_to_trend",   "median"),
-    #     total_videos    =("video_id",         "count"),
-    # ).round(2).reset_index()
-    # eng["avg_views"]    = eng["avg_views"].apply(fmt_df)
-    # eng["avg_likes"]    = eng["avg_likes"].apply(fmt_df)
-    # eng["avg_comments"] = eng["avg_comments"].apply(fmt_df)
-    # eng["engagement_rate"] = (eng["engagement_rate"] * 100).round(1).astype(str) + "%"
-    # eng["hrs_to_viral"] = eng["hrs_to_viral"].round(0).astype(int).astype(str) + "h"
-    # eng.columns = ["Country", "Avg Views", "Avg Likes", "Avg Comments",
-    #                "Engagement Rate", "Hours to Viral", "Total Videos"]
-    # st.dataframe(eng, use_container_width=True, hide_index=True)
-
-
-# ══════════════════════════════════════════════════════════════
 #  PAGE: HISTORICAL
-# ══════════════════════════════════════════════════════════════
+
 def page_historical(df):
     st.markdown(
         '<div class="page-hero">'
@@ -987,7 +883,7 @@ def page_historical(df):
           .reset_index()
     )
 
-    st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+    # st.markdown('<div class="chart-card">', unsafe_allow_html=True)
     st.markdown(
         '<div class="chart-question">Which categories have appeared on trending the most?</div>'
         '<div class="chart-context">Longer bar = appeared on trending more often.</div>',
@@ -1015,15 +911,15 @@ def page_historical(df):
     st.plotly_chart(fig1, use_container_width=True)
     top_overall = cat_summary.iloc[0]["category_name"]
     top_count   = int(cat_summary.iloc[0]["total_videos"])
-    st.markdown(
-        f'<div class="chart-insight-bar">💡 <b>{top_overall}</b> appeared on trending '
-        f'{top_count} times — the most consistent category.</div>',
-        unsafe_allow_html=True
-    )
+    # st.markdown(
+    #     f'<div class="chart-insight-bar">💡 <b>{top_overall}</b> appeared on trending '
+    #     f'{top_count} times — the most consistent category.</div>',
+    #     unsafe_allow_html=True
+    # )
     st.markdown('</div>', unsafe_allow_html=True)
 
     sh("Category Performance Summary")
-    st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+
     st.markdown(
         '<div class="chart-question">How do categories compare on views, likes, and viral speed?</div>',
         unsafe_allow_html=True
@@ -1039,7 +935,7 @@ def page_historical(df):
     st.markdown('</div>', unsafe_allow_html=True)
 
     sh("Country Performance — Total Videos Collected")
-    st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+
     st.markdown(
         '<div class="chart-question">How many trending videos collected per country?</div>'
         '<div class="chart-context">Equal bars = balanced data quality across markets.</div>',
@@ -1066,9 +962,8 @@ def page_historical(df):
     st.markdown('</div>', unsafe_allow_html=True)
 
 
-# ══════════════════════════════════════════════════════════════
-#  PAGE: PREDICT  (Logistic Regression — beginner friendly)
-# ══════════════════════════════════════════════════════════════
+#  PAGE: PREDICT
+
 def page_predict(df):
     st.markdown(
         '<div class="page-hero">'
@@ -1077,18 +972,6 @@ def page_predict(df):
         '</div>',
         unsafe_allow_html=True
     )
-
-    # ── Explain the model (beginner friendly) ───────────────────
-    st.markdown("""
-    <div class="ml-info-box">
-    <b>How this works (simple explanation):</b><br>
-    This page uses <b>Logistic Regression</b> — the simplest machine learning model for
-    yes/no predictions. It looks at 11 features of your video (title length, engagement,
-    tags, upload time, etc.), learns the importance of each feature from the current
-    trending data, and outputs a probability between 0% and 100% that your video will trend.
-    The model is trained fresh from the live database every time you load this page.
-    </div>
-    """, unsafe_allow_html=True)
 
     # ── Train model on live data ────────────────────────────────
     model, scaler = train_simple_model(df)
