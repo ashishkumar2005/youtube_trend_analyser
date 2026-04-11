@@ -20,7 +20,6 @@ def _get_db_config():
     user = os.environ.get("MYSQLUSER", "root")
     pwd  = os.environ.get("MYSQLPASSWORD", "")
     db   = os.environ.get("MYSQLDATABASE", "railway")
-
     logger.info(f"Connecting to MySQL: {host}:{port} db={db} user={user}")
     return {
         "host":               host,
@@ -154,7 +153,13 @@ def save_videos(df):
         conn.close()
 
 
-def get_latest_trending(country=None, limit=500):
+def get_latest_trending(country=None, limit=5000):
+    """
+    Fetch trending videos from MySQL.
+    Returns ALL records (not deduplicated) so the dashboard
+    can use full history for analysis and ML training.
+    The Live Feed page handles its own deduplication.
+    """
     try:
         conn   = get_connection()
         cursor = conn.cursor(dictionary=True)
