@@ -460,27 +460,55 @@ def get_historical_data(
         return pd.DataFrame()
 
 
-def get_snapshot_history() -> pd.DataFrame:
-    """Return all snapshot metadata, newest first."""
+def get_total_video_count() -> int:
+    """
+    Return the total number of video rows ever collected
+    across ALL collection runs since the beginning.
+
+    This is the real cumulative number — 250 after run 1,
+    500 after run 2, 750 after run 3, and so on.
+    """
+    try:
+        conn = get_connection()
+        cur  = conn.cursor()
+        try:
+            cur.execute("SELECT COUNT(*) FROM videos")
+            row = cur.fetchone()
+            return int(row[0]) if row else 0
+        finally:
+            cur.close()
+            conn.close()
+    except Exception as exc:
+        logger.error("get_total_video_count failed: %s", exc)
+        return 0
+
+
+def get_all_collected_videos(limit: int = 50000) -> pd.DataFrame:
+    """
+    Return ALL videos ever collected — not just the latest snapshot.
+    Used for Analysis, Historical, and ML training so the model
+    learns from the full history, not just the last 250 videos.
+    """
     try:
         conn = get_connection()
         cur  = conn.cursor(dictionary=True)
         try:
             cur.execute("""
-                SELECT snapshot_id, run_at, country, video_count, status
-                FROM   snapshots
-                ORDER  BY run_at DESC
-                LIMIT  500
-            """)
+                SELECT v.*
+                FROM   videos v
+                JOIN   snapshots s ON v.snapshot_id = s.snapshot_id
+                WHERE  s.status = 'ok'
+                ORDER  BY v.run_at DESC, v.view_count DESC
+                LIMIT  %s
+            """, (limit,))
             rows = cur.fetchall()
             return pd.DataFrame(rows) if rows else pd.DataFrame()
         finally:
             cur.close()
             conn.close()
     except Exception as exc:
-        logger.error("get_snapshot_history failed: %s", exc)
+        logger.error("get_all_collected_videos failed: %s", exc)
         return pd.DataFrame()
-
 
 # ──────────────────────────────────────────────────────────────
 #  Quick self-test  (python src/database.py)
