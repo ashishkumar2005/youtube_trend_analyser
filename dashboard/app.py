@@ -11,7 +11,11 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-from src.database import get_latest_trending
+from src.database import (
+    get_latest_trending,
+    get_total_video_count,
+    get_all_collected_videos,
+)
 from src.data_cleaner import clean_and_engineer
 import plotly.express as px
 import plotly.graph_objects as go
@@ -420,13 +424,35 @@ def fmt_df(n):
 
 # ── Load and cache data ───────────────────────────────────────
 @st.cache_data(ttl=600)
-def load_data(limit=5000):
+def load_latest(limit: int = 500) -> pd.DataFrame:
+    """
+    Load only the LATEST snapshot per country (250 videos max).
+    Used for the Live Feed table display.
+    Cached for 10 minutes.
+    """
     df_raw = get_latest_trending(limit=limit)
     if df_raw.empty:
         return pd.DataFrame()
     df = clean_and_engineer(df_raw)
     df = apply_country_names(df)
-    # Remove "Unknown" category everywhere
+    if "category_name" in df.columns:
+        df = df[df["category_name"] != "Unknown"].reset_index(drop=True)
+    return df
+
+
+@st.cache_data(ttl=600)
+def load_all_history(limit: int = 50000) -> pd.DataFrame:
+    """
+    Load ALL videos ever collected across every run.
+    Used for Analysis, Country Compare, Historical, and ML training.
+    This is the full dataset that grows every 8 hours.
+    Cached for 10 minutes.
+    """
+    df_raw = get_all_collected_videos(limit=limit)
+    if df_raw.empty:
+        return pd.DataFrame()
+    df = clean_and_engineer(df_raw)
+    df = apply_country_names(df)
     if "category_name" in df.columns:
         df = df[df["category_name"] != "Unknown"].reset_index(drop=True)
     return df
@@ -568,19 +594,33 @@ def sh(text):
 
 
 # ── KPI cards ─────────────────────────────────────────────────
-def kpi_cards(df):
+def kpi_cards(df: pd.DataFrame, show_total: bool = False):
+    """
+    Render the 4 KPI cards at the top of each page.
+
+    show_total=True  → 'Videos Tracked' shows cumulative ALL-TIME count
+    show_total=False → 'Videos Tracked' shows count from current df
+    """
+    if show_total:
+        # Real cumulative count from the full database
+        total_count = get_total_video_count()
+        total = f"{total_count:,}"
+        sub_label = f"Total videos collected across all runs"
+    else:
+        # Count of rows in the passed DataFrame
+        total = f"{len(df):,}"
+        sub_label = f"Trending videos across {df['country'].nunique()} countries"
+
     avg_views  = fmt(df["view_count"].mean())
     eng_rate   = f"{df['like_view_ratio'].mean()*100:.1f}%"
     viral_time = f"{df['hours_to_trend'].median():.0f}h"
-    # Use unique videos for count
-    unique_count = df.drop_duplicates(subset=["video_id","country"]).shape[0]
-    total = f"{unique_count:,}"
+
     st.markdown(f"""
     <div class="kpi-row">
       <div class="kpi-card">
         <div class="kpi-label">Videos Tracked</div>
         <div class="kpi-value">{total}</div>
-        <div class="kpi-sub">Unique trending videos across {df['country'].nunique()} countries</div>
+        <div class="kpi-sub">{sub_label}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Average Views</div>
@@ -602,37 +642,47 @@ def kpi_cards(df):
 
 #  PAGE: LIVE FEED
 
-def page_live(df):
+def page_live(df_latest: pd.DataFrame):
+    """
+    Live Feed page.
+    df_latest = only the most recent collection run (250 videos).
+    The KPI 'Videos Tracked' shows the ALL-TIME cumulative total.
+    """
     st.markdown(
         '<div class="page-hero">'
         '<p class="page-title">Live Trending Feed</p>'
-        '<p class="page-sub">Real-time YouTube trending videos — auto-refreshed every 8 hours across 5 countries</p>'
+        '<p class="page-sub">Real-time YouTube trending videos — '
+        'auto-refreshed every 8 hours across 5 countries</p>'
         '</div>',
         unsafe_allow_html=True
     )
-    kpi_cards(df)
+
+    # show_total=True → reads cumulative count from database
+    kpi_cards(df_latest, show_total=True)
 
     sh("Filter & Explore")
     c1, c2, c3 = st.columns([2, 2, 1])
     with c1:
-        country = st.selectbox("Country", ["All"] + sorted(df["country"].unique().tolist()))
+        country = st.selectbox(
+            "Country",
+            ["All"] + sorted(df_latest["country"].unique().tolist())
+        )
     with c2:
-        # Remove "Unknown" from category list
         valid_cats = sorted([
-            c for c in df["category_name"].dropna().unique().tolist()
+            c for c in df_latest["category_name"].dropna().unique().tolist()
             if c != "Unknown"
         ])
         category = st.selectbox("Category", ["All"] + valid_cats)
     with c3:
         top_n = st.selectbox("Top Results", [5, 10, 25, 50, 100], index=1)
 
-    # ── Deduplicate: show only the LATEST collection of each video per country ──
-    # Each video can appear multiple times (once per collection run).
-    # We keep only the most recent snapshot so the table shows clean, unique videos.
+    # Deduplicate: show each video once with latest stats
     df_dedup = (
-        df.sort_values("run_at", ascending=False)
-          .drop_duplicates(subset=["video_id", "country"], keep="first")
-          .reset_index(drop=True)
+        df_latest
+        .sort_values("fetched_at" if "fetched_at" in df_latest.columns else "run_at",
+                     ascending=False)
+        .drop_duplicates(subset=["video_id", "country"], keep="first")
+        .reset_index(drop=True)
     )
 
     filtered = df_dedup.copy()
@@ -642,18 +692,25 @@ def page_live(df):
     display = filtered[[
         "title", "channel_title", "country", "view_count",
         "like_count", "comment_count", "category_name",
-        "views_per_hour", "run_at"
+        "views_per_hour",
     ]].copy()
     display = display.sort_values("view_count", ascending=False).head(top_n).reset_index(drop=True)
     display["view_count"]     = display["view_count"].apply(fmt_df)
     display["like_count"]     = display["like_count"].apply(fmt_df)
     display["comment_count"]  = display["comment_count"].apply(fmt_df)
     display["views_per_hour"] = display["views_per_hour"].apply(fmt_df)
-    display.columns = ["Video Title", "Channel", "Country", "Views",
-                        "Likes", "Comments", "Category", "Views/Hour", "Collected At"]
+    display.columns = [
+        "Video Title", "Channel", "Country", "Views",
+        "Likes", "Comments", "Category", "Views/Hour"
+    ]
     st.dataframe(display, use_container_width=True, hide_index=True)
 
-
+    total_in_db = get_total_video_count()
+    st.info(
+        f"📊 **{total_in_db:,} videos** collected in total across all runs. "
+        f"The table above shows the **latest snapshot** ({len(df_dedup)} unique videos). "
+        f"'Videos Tracked' in the KPI shows the real cumulative total."
+    )
 #  PAGE: ANALYSIS
 
 def page_analysis(df):
@@ -765,7 +822,6 @@ def page_country(df):
 
     sh("Which Country Gets The Most Views?")
 
-    # st.markdown('<div class="chart-card">', unsafe_allow_html=True)
     st.markdown(
         '<div class="chart-question">Average views per trending video by country</div>'
         '<div class="chart-context">'
@@ -790,12 +846,7 @@ def page_country(df):
                        yaxis_title="Average Views", **THEME)
     st.plotly_chart(fig1, use_container_width=True)
     top_v = avg_views.iloc[0]["country"]
-    # st.markdown(
-    #     f'<div class="chart-insight-bar">💡 <b>{top_v}</b> trending videos '
-    #     f'get the most views on average — '
-    #     f'{fmt(avg_views.iloc[0]["view_count"])} per video.</div>',
-    #     unsafe_allow_html=True
-    # )
+  
     st.markdown('</div>', unsafe_allow_html=True)
 
     sh("Where Do Viewers Engage The Most?")
@@ -825,11 +876,7 @@ def page_country(df):
                        yaxis_title="Engagement Rate (%)", **THEME)
     st.plotly_chart(fig2, use_container_width=True)
     top_e = eng_data.iloc[0]["country"]
-    # st.markdown(
-    #     f'<div class="chart-insight-bar">💡 <b>{top_e}</b> has the most engaged viewers — '
-    #     f'{eng_data.iloc[0]["pct"]:.1f}% of viewers liked trending videos there.</div>',
-    #     unsafe_allow_html=True
-    # )
+    
     st.markdown('</div>', unsafe_allow_html=True)
 
     sh("What Kind of Videos Trend in Each Country?")
@@ -883,7 +930,6 @@ def page_historical(df):
           .reset_index()
     )
 
-    # st.markdown('<div class="chart-card">', unsafe_allow_html=True)
     st.markdown(
         '<div class="chart-question">Which categories have appeared on trending the most?</div>'
         '<div class="chart-context">Longer bar = appeared on trending more often.</div>',
@@ -911,11 +957,7 @@ def page_historical(df):
     st.plotly_chart(fig1, use_container_width=True)
     top_overall = cat_summary.iloc[0]["category_name"]
     top_count   = int(cat_summary.iloc[0]["total_videos"])
-    # st.markdown(
-    #     f'<div class="chart-insight-bar">💡 <b>{top_overall}</b> appeared on trending '
-    #     f'{top_count} times — the most consistent category.</div>',
-    #     unsafe_allow_html=True
-    # )
+  
     st.markdown('</div>', unsafe_allow_html=True)
 
     sh("Category Performance Summary")
@@ -1111,7 +1153,6 @@ def page_predict(df):
         )
         st.plotly_chart(gauge, use_container_width=True)
 
-        # ── Improvement tips ───────────────────────────────────
         tips = []
         if sentiment < 0:
             tips.append("Your title has a negative tone — try reframing it positively to boost clicks")
@@ -1138,9 +1179,8 @@ def page_predict(df):
             st.success("Your video looks well-optimised! High chance of trending.")
 
 
-# ══════════════════════════════════════════════════════════════
 #  MAIN
-# ══════════════════════════════════════════════════════════════
+
 def main():
     with st.sidebar:
         st.markdown("""
@@ -1159,6 +1199,14 @@ def main():
             label_visibility="collapsed"
         )
 
+        st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+
+        # ── Refresh button — fixes GitHub Actions data not showing ──
+        if st.button("🔄 Refresh Data", help="Click after GitHub Actions runs to load new data"):
+            st.cache_data.clear()
+            st.success("Cache cleared! Loading fresh data...")
+            st.rerun()
+
         st.markdown("""
         <div class="s-footer">
           <div>Data refreshes every 8 hours</div>
@@ -1167,20 +1215,38 @@ def main():
         </div>
         """, unsafe_allow_html=True)
 
-    df = load_data()
-    if df.empty:
-        st.error(
-            "No data found yet. Data is collected every 8 hours via GitHub Actions. "
-            "Go to GitHub → Actions → YouTube Trending Data Collector → Run workflow "
-            "to collect data right now."
-        )
-        return
+    # ── Load data based on which page is selected ──────────────────
+    # Live Feed  → latest snapshot only (fast, 250 videos)
+    # All others → full history (richer data for analysis and ML)
 
-    if   page == "Live Feed":       page_live(df)
-    elif page == "Analysis":        page_analysis(df)
-    elif page == "Country Compare": page_country(df)
-    elif page == "Historical":      page_historical(df)
-    elif page == "Predict":         page_predict(df)
+    if page == "Live Feed":
+        df_latest = load_latest()
+        if df_latest.empty:
+            st.error(
+                "No data found yet. Go to GitHub → Actions → "
+                "YouTube Trending Data Collector → Run workflow to collect data now."
+            )
+            return
+        page_live(df_latest)
+
+    elif page == "Predict":
+        # Predict needs full history for ML training
+        df_all = load_all_history()
+        if df_all.empty:
+            st.error("No data found. Run a collection first.")
+            return
+        page_predict(df_all)
+
+    else:
+        # Analysis, Country Compare, Historical — all use full history
+        df_all = load_all_history()
+        if df_all.empty:
+            st.error("No data found. Run a collection first.")
+            return
+
+        if   page == "Analysis":        page_analysis(df_all)
+        elif page == "Country Compare": page_country(df_all)
+        elif page == "Historical":      page_historical(df_all)
 
 
 if __name__ == "__main__":
