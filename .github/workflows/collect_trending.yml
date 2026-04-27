@@ -2,8 +2,11 @@ name: YouTube Trending Data Collector
 
 on:
   schedule:
-    - cron: '0 */8 * * *'
-  workflow_dispatch:
+    # Runs ONCE per day at midnight UTC
+    # = 05:30 AM IST every morning
+    # 5 videos × 5 countries = 25 new videos added each day
+    - cron: '0 0 * * *'
+  workflow_dispatch:   # Manual run button on GitHub
 
 jobs:
   collect:
@@ -14,43 +17,46 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
-      - name: Test MySQL connection
+      - name: Test TiDB Cloud connection
         env:
           MYSQLHOST:     ${{ secrets.MYSQLHOST }}
           MYSQLPORT:     ${{ secrets.MYSQLPORT }}
           MYSQLUSER:     ${{ secrets.MYSQLUSER }}
           MYSQLPASSWORD: ${{ secrets.MYSQLPASSWORD }}
           MYSQLDATABASE: ${{ secrets.MYSQLDATABASE }}
+          MYSQL_SSL:     "true"
         run: |
           python -c "
           import os, mysql.connector
           try:
               conn = mysql.connector.connect(
                   host=os.environ['MYSQLHOST'],
-                  port=int(os.environ.get('MYSQLPORT', 3306)),
+                  port=int(os.environ.get('MYSQLPORT', 4000)),
                   user=os.environ['MYSQLUSER'],
                   password=os.environ['MYSQLPASSWORD'],
                   database=os.environ['MYSQLDATABASE'],
-                  connection_timeout=30
+                  ssl_disabled=False,
+                  ssl_verify_cert=False,
+                  ssl_verify_identity=False,
+                  connection_timeout=30,
               )
-              print('MySQL connection successful!')
+              print('Connected to TiDB Cloud successfully!')
               conn.close()
           except Exception as e:
-              print(f'MySQL connection FAILED: {e}')
+              print(f'Connection failed: {e}')
               exit(1)
           "
 
-      - name: Run data collector
+      - name: Collect trending data
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
           MYSQLHOST:       ${{ secrets.MYSQLHOST }}
@@ -58,6 +64,7 @@ jobs:
           MYSQLUSER:       ${{ secrets.MYSQLUSER }}
           MYSQLPASSWORD:   ${{ secrets.MYSQLPASSWORD }}
           MYSQLDATABASE:   ${{ secrets.MYSQLDATABASE }}
+          MYSQL_SSL:       "true"
         run: python src/data_collector.py
 
       - name: Done
