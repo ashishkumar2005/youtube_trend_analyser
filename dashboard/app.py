@@ -645,14 +645,14 @@ def kpi_cards(df: pd.DataFrame, show_total: bool = False):
 def page_live(df_latest: pd.DataFrame):
     """
     Live Feed page.
-    df_latest = only the most recent collection run (250 videos).
+    df_latest = only the most recent collection run (25 videos).
     The KPI 'Videos Tracked' shows the ALL-TIME cumulative total.
     """
     st.markdown(
         '<div class="page-hero">'
         '<p class="page-title">Live Trending Feed</p>'
         '<p class="page-sub">Real-time YouTube trending videos — '
-        'auto-refreshed every 8 hours across 5 countries</p>'
+        'auto-refreshed every 24 hours across 5 countries</p>'
         '</div>',
         unsafe_allow_html=True
     )
@@ -1199,17 +1199,11 @@ def main():
             label_visibility="collapsed"
         )
 
-        st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+       
 
-        # ── Refresh button — fixes GitHub Actions data not showing ──
-        if st.button("🔄 Refresh Data", help="Click after GitHub Actions runs to load new data"):
-            st.cache_data.clear()
-            st.success("Cache cleared! Loading fresh data...")
-            st.rerun()
-
-        st.markdown("""
+       st.markdown("""
         <div class="s-footer">
-          <div>Data refreshes every 8 hours</div>
+          <div>Data refreshes every 24 hours</div>
           <div>YouTube Data API v3</div>
           <div>US · IN · GB · CA · AU</div>
         </div>
