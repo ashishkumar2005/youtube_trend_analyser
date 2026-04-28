@@ -1,9 +1,9 @@
 # YT Trending Intelligence Dashboard
  
-> A fully automated, cloud-deployed data science system that collects YouTube trending videos from 5 countries every 3 hours.
+> A fully automated, cloud-deployed data science system that collects YouTube trending videos from 5 countries every 24 hours.
  
 [![GitHub Actions](https://img.shields.io/github/actions/workflow/status/ashishkumar2005/yt/collect_trending.yml?label=Data%20Collection&logo=github)](https://github.com/ashishkumar2005/yt/actions)
-[![Live Dashboard](https://img.shields.io/badge/Live%20Dashboard-Railway-blueviolet?logo=railway)](https://yt-production-8742.up.railway.app)
+[![Live Dashboard](https://img.shields.io/badge/Live%20Dashboard-Streamlit-red?logo=streamlit)](https://your-streamlit-app-url.streamlit.app)
 [![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)](https://python.org)
 [![MySQL](https://img.shields.io/badge/Database-MySQL-orange?logo=mysql)](https://mysql.com)
  
@@ -11,7 +11,7 @@
  
 ## Live Demo
  
-**Dashboard:** [yt-production-8742.up.railway.app](https://yt-production-8742.up.railway.app)
+**Dashboard:** https://youtubetrendanalyser.streamlit.app/
  
 ---
  
@@ -34,24 +34,22 @@
  
 Think of it like **a newspaper that writes itself.**
  
-Every 8 hours, an automated pipeline:
+Every 24 hours, an automated pipeline:
 1. **Wakes up** on GitHub Actions (no laptop needed)
-2. **Calls YouTube API** → fetches top 50 trending videos from 5 countries
-3. **Saves 250 videos** into a cloud MySQL database on Railway
+2. **Calls YouTube API** → fetches top 5 trending videos from 5 countries
+3. **Saves 25 videos** into a cloud MySQL database on TiDB
 4. **Dashboard updates** automatically — anyone can visit the live URL
  
 ```
-Every 8 hours (GitHub Actions)
+Every 24 hours (GitHub Actions)
         ↓
 YouTube Data API v3
         ↓
-250 videos (US · IN · GB · CA · AU)
+25 videos (US · IN · GB · CA · AU)
         ↓
-Railway MySQL Database
+TiDB MySQL Database
         ↓
 Live Streamlit Dashboard
-        ↓
-yt-production-8742.up.railway.app
 ```
  
 ---
@@ -61,10 +59,10 @@ yt-production-8742.up.railway.app
 ```
 ┌─────────────────────────────────────────┐
 │              GITHUB ACTIONS             │
-│   Cron: every 8 hours (0 */8 * * *)    │
+│   Cron: every 24 hours (0 */24 * * *)    │
 │   → Installs dependencies               │
 │   → Runs src/data_collector.py          │
-│   → Fetches 250 videos from YouTube     │
+│   → Fetches 25 videos from YouTube     │
 │   → Saves to MySQL                      │
 └────────────────────┬────────────────────┘
                      │ inserts data
@@ -78,7 +76,7 @@ yt-production-8742.up.railway.app
 │  └──────────────┘  └────────┬────────┘  │
 └───────────────────────────  │  ─────────┘
                               ↓
-              yt-production-8742.up.railway.app
+                        streamlit
 ```
  
 ---
@@ -87,11 +85,11 @@ yt-production-8742.up.railway.app
  
 - **Fully Automated** — GitHub Actions runs 24/7, no manual effort
 - **5 Countries** — US, India, UK, Canada, Australia
-- **250 videos per run** — 50 per country every 8 hours
+- **25 videos per run** — 50 per country every 8 hours
 - **ML Predictions** — Logistic Regression
 - **5-Page Dashboard** — Live Feed, Analysis, Country Compare, Historical, Predict
 - **Production Security** — All secrets managed via GitHub Secrets & Railway env vars
-- **Cloud MySQL** — Persistent database with 2,000+ rows and growing
+- **Cloud MySQL** — Persistent database with 200+ rows and growing
  
 ---
  
@@ -116,7 +114,6 @@ yt/
 │   └── raw/                       # JSON backups of API responses
 ├── config.py                      # Centralised configuration
 ├── requirements.txt               # Python dependencies
-└── railway.json                   # Railway deployment config
 ```
  
 ---
@@ -180,10 +177,10 @@ Unlike static models, this system:
 | Data Collection | YouTube Data API v3 |
 | Data Processing | Pandas, NumPy |
 | Machine Learning | Scikit-learn (Logistic Regression), TextBlob |
-| Database | MySQL (Railway) |
+| Database | MySQL (TiDB) |
 | Dashboard | Streamlit, Plotly |
 | Scheduler | GitHub Actions (Scheduled Jobs) |
-| Hosting | Railway |
+| Hosting | Streamlit |
 | Secret Management | GitHub Secrets + Railway Env Vars |
  
 ---
@@ -193,7 +190,7 @@ Unlike static models, this system:
 ### Prerequisites
 - Python 3.11+
 - YouTube Data API v3 key ([Get one here](https://console.cloud.google.com))
-- MySQL database (local or Railway)
+- MySQL database (TiDB)
  
 ### 1. Clone the repository
 ```bash
@@ -214,7 +211,7 @@ MYSQLHOST=localhost
 MYSQLPORT=3306
 MYSQLUSER=root
 MYSQLPASSWORD=your_password
-MYSQLDATABASE=yt_trending
+MYSQLDATABASE=railway
 ```
  
 ### 4. Run the data collector once
@@ -241,7 +238,7 @@ The `.github/workflows/collect_trending.yml` workflow runs automatically:
 ```yaml
 on:
   schedule:
-    - cron: '0 */8 * * *'   # Every 8 hours
+    - cron: '0 */24 * * *'   # Every 24 hours
   workflow_dispatch:          # Manual trigger anytime
 ```
  
@@ -260,9 +257,9 @@ Add these secrets to your GitHub repo (**Settings → Secrets → Actions**):
  
 ## Key Stats
  
-- ✅ **250 videos** collected per run
+- ✅ **25 videos** collected per run
 - ✅ **2,000+ rows** already in database and growing
-- ✅ **Every 8 hours** automatically
+- ✅ **Every 24 hours** automatically
 - ✅ **5 countries** tracked simultaneously
 - ✅ **43 features** engineered per video
 - ✅ **~40 seconds** per full collection run
